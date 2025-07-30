@@ -1,0 +1,2077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Isolation Certificate System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --light-color: #ecf0f1;
+            --dark-color: #2c3e50;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border: none;
+        }
+        
+        .card-header {
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            padding: 15px 20px;
+            font-weight: 600;
+        }
+        
+        .btn-primary {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+        
+        .btn-danger {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+        
+        .signature-pad {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: white;
+        }
+        
+        .section-icon {
+            margin-right: 10px;
+            color: var(--secondary-color);
+        }
+        
+        .progress-container {
+            margin-bottom: 30px;
+        }
+        
+        .progress-step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .progress-step-number {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .progress-step.active .progress-step-number {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+        
+        .progress-step.completed .progress-step-number {
+            background-color: #2ecc71;
+            color: white;
+        }
+        
+        .progress-step-text {
+            flex: 1;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            display: none;
+        }
+        
+        .loading-spinner {
+            color: white;
+            font-size: 3rem;
+        }
+        
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+        
+        .status-draft {
+            background-color: #f39c12;
+            color: white;
+        }
+        
+        .status-completed {
+            background-color: #2ecc71;
+            color: white;
+        }
+        
+        .equipment-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        
+        .equipment-image-modal {
+            max-width: 100%;
+            max-height: 80vh;
+        }
+        
+        .visual-isolation {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .visual-item {
+            flex: 1 1 200px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            text-align: center;
+        }
+        
+        .visual-item img {
+            max-width: 100%;
+            height: 100px;
+            object-fit: contain;
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .visual-item {
+                flex: 1 1 100%;
+            }
+        }
+        
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: var(--secondary-color);
+        }
+        
+        .timeline-item {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -30px;
+            top: 5px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: var(--secondary-color);
+            border: 3px solid white;
+        }
+        
+        .timeline-date {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .timeline-content {
+            background-color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .risk-indicator {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .risk-low {
+            background-color: #2ecc71;
+        }
+        
+        .risk-medium {
+            background-color: #f39c12;
+        }
+        
+        .risk-high {
+            background-color: #e74c3c;
+        }
+        
+        .attachment-thumbnail {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 5px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        
+        .required-field::after {
+            content: " *";
+            color: red;
+        }
+        
+        .form-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .section-title {
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+        }
+        
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <div class="mt-2">Generating PDF...</div>
+        </div>
+    </div>
+    
+    <div class="container py-4">
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h1 class="display-4">Isolation Certificate System</h1>
+                <p class="lead">Manage equipment isolation and de-isolation procedures safely and efficiently</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <button id="newCertificateBtn" class="btn btn-primary btn-lg">
+                    <i class="fas fa-plus-circle"></i> New Certificate
+                </button>
+            </div>
+        </div>
+        
+        <div class="progress-container">
+            <div class="progress-step" id="step1">
+                <div class="progress-step-number">1</div>
+                <div class="progress-step-text">Create Isolation Certificate</div>
+            </div>
+            <div class="progress-step" id="step2">
+                <div class="progress-step-number">2</div>
+                <div class="progress-step-text">Approval Process</div>
+            </div>
+            <div class="progress-step" id="step3">
+                <div class="progress-step-number">3</div>
+                <div class="progress-step-text">Isolation Implementation</div>
+            </div>
+            <div class="progress-step" id="step4">
+                <div class="progress-step-number">4</div>
+                <div class="progress-step-text">Work Completion</div>
+            </div>
+            <div class="progress-step" id="step5">
+                <div class="progress-step-number">5</div>
+                <div class="progress-step-text">De-isolation Confirmation</div>
+            </div>
+        </div>
+        
+        <div id="certificateList" class="mb-4">
+            <h3><i class="fas fa-list section-icon"></i>Existing Certificates</h3>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Certificate ID</th>
+                            <th>Equipment</th>
+                            <th>Requestor</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="certificateTableBody">
+                        <!-- Certificates will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="certificateFormContainer" class="d-none">
+            <div class="d-flex justify-content-between mb-3">
+                <button id="backToListBtn" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to List
+                </button>
+                <div>
+                    <button id="saveDraftBtn" class="btn btn-warning me-2">
+                        <i class="fas fa-save"></i> Save Draft
+                    </button>
+                    <button id="submitCertificateBtn" class="btn btn-success">
+                        <i class="fas fa-check-circle"></i> Submit Certificate
+                    </button>
+                </div>
+            </div>
+            
+            <div id="certificateForm">
+                <!-- Form content will be generated here -->
+            </div>
+        </div>
+        
+        <div id="certificateViewContainer" class="d-none">
+            <div class="d-flex justify-content-between mb-3">
+                <button id="backToListBtn2" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to List
+                </button>
+                <div>
+                    <button id="editCertificateBtn" class="btn btn-primary me-2">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button id="downloadPdfBtn" class="btn btn-danger">
+                        <i class="fas fa-file-pdf"></i> Download PDF
+                    </button>
+                </div>
+            </div>
+            
+            <div id="certificateView">
+                <!-- Certificate view will be generated here -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Image Modal -->
+    <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Image Preview</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img id="modalImage" src="" class="equipment-image-modal" alt="Preview">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Confirmation Modal -->
+    <div class="modal fade" id="confirmationModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmationModalTitle">Confirm Action</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="confirmationModalBody">
+                    Are you sure you want to perform this action?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmActionBtn">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let certificates = JSON.parse(localStorage.getItem('isolationCertificates')) || [];
+        let currentCertificate = null;
+        let currentMode = 'list'; // 'list', 'form', 'view'
+        let isEditMode = false;
+        let signaturePads = {};
+        let certificateCounter = certificates.length > 0 ? 
+            Math.max(...certificates.map(c => parseInt(c.certificateId.split('-').pop() || 0))) : 0;
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeUI();
+            loadCertificateList();
+            setupEventListeners();
+        });
+        
+        function initializeUI() {
+            updateProgressSteps();
+        }
+        
+        function setupEventListeners() {
+            // Navigation buttons
+            document.getElementById('newCertificateBtn').addEventListener('click', createNewCertificate);
+            document.getElementById('backToListBtn').addEventListener('click', showCertificateList);
+            document.getElementById('backToListBtn2').addEventListener('click', showCertificateList);
+            
+            // Form actions
+            document.getElementById('saveDraftBtn').addEventListener('click', saveAsDraft);
+            document.getElementById('submitCertificateBtn').addEventListener('click', submitCertificate);
+            document.getElementById('editCertificateBtn').addEventListener('click', editCertificate);
+            document.getElementById('downloadPdfBtn').addEventListener('click', generatePDF);
+            
+            // Image modal
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('equipment-image') || e.target.classList.contains('attachment-thumbnail')) {
+                    document.getElementById('modalImage').src = e.target.src;
+                    const modal = new bootstrap.Modal(document.getElementById('imageModal'));
+                    modal.show();
+                }
+            });
+            
+            // Confirmation modal
+            document.getElementById('confirmActionBtn').addEventListener('click', function() {
+                const action = this.dataset.action;
+                if (action === 'submit') {
+                    actuallySubmitCertificate();
+                } else if (action === 'reset') {
+                    actuallyResetForm();
+                }
+                const modal = bootstrap.Modal.getInstance(document.getElementById('confirmationModal'));
+                modal.hide();
+            });
+        }
+        
+        function updateProgressSteps() {
+            const steps = document.querySelectorAll('.progress-step');
+            steps.forEach(step => {
+                step.classList.remove('active', 'completed');
+            });
+            
+            if (currentMode === 'list') {
+                document.getElementById('step1').classList.add('active');
+            } else if (currentMode === 'form') {
+                document.getElementById('step1').classList.add('completed');
+                document.getElementById('step2').classList.add('active');
+            } else if (currentMode === 'view') {
+                const status = currentCertificate?.status || 'draft';
+                
+                document.getElementById('step1').classList.add('completed');
+                document.getElementById('step2').classList.add('completed');
+                
+                if (status === 'completed') {
+                    document.getElementById('step3').classList.add('completed');
+                    document.getElementById('step4').classList.add('completed');
+                    document.getElementById('step5').classList.add('completed');
+                } else if (status === 'approved') {
+                    document.getElementById('step3').classList.add('active');
+                } else {
+                    document.getElementById('step2').classList.add('active');
+                }
+            }
+        }
+        
+        function loadCertificateList() {
+            const tableBody = document.getElementById('certificateTableBody');
+            tableBody.innerHTML = '';
+            
+            if (certificates.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="6" class="text-center">No certificates found. Create a new one to get started.</td></tr>';
+                return;
+            }
+            
+            certificates.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            
+            certificates.forEach(cert => {
+                const row = document.createElement('tr');
+                
+                // Format date
+                const date = new Date(cert.createdAt);
+                const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                
+                // Status badge
+                let statusBadge = '';
+                if (cert.status === 'draft') {
+                    statusBadge = '<span class="status-badge status-draft">Draft</span>';
+                } else if (cert.status === 'submitted') {
+                    statusBadge = '<span class="status-badge" style="background-color:#3498db;color:white">Submitted</span>';
+                } else if (cert.status === 'approved') {
+                    statusBadge = '<span class="status-badge" style="background-color:#2ecc71;color:white">Approved</span>';
+                } else if (cert.status === 'completed') {
+                    statusBadge = '<span class="status-badge status-completed">Completed</span>';
+                }
+                
+                row.innerHTML = `
+                    <td>${cert.certificateId || 'N/A'}</td>
+                    <td>${cert.equipmentDetails?.name || 'N/A'}</td>
+                    <td>${cert.requestorDetails?.name || 'N/A'}</td>
+                    <td>${statusBadge}</td>
+                    <td>${formattedDate}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary view-certificate-btn" data-id="${cert.id}">
+                            <i class="fas fa-eye"></i> View
+                        </button>
+                        ${cert.status === 'draft' ? `
+                        <button class="btn btn-sm btn-warning edit-certificate-btn ms-1" data-id="${cert.id}">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="btn btn-sm btn-danger delete-certificate-btn ms-1" data-id="${cert.id}">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                        ` : ''}
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+            
+            // Add event listeners to the dynamically created buttons
+            document.querySelectorAll('.view-certificate-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    viewCertificate(this.dataset.id);
+                });
+            });
+            
+            document.querySelectorAll('.edit-certificate-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    editCertificate(this.dataset.id);
+                });
+            });
+            
+            document.querySelectorAll('.delete-certificate-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    deleteCertificate(this.dataset.id);
+                });
+            });
+        }
+        
+        function createNewCertificate() {
+            certificateCounter++;
+            const certId = certificateCounter.toString().padStart(4, '0');
+            
+            currentCertificate = {
+                id: generateId(),
+                status: 'draft',
+                createdAt: new Date().toISOString(),
+                certificateId: `O&M-ICC-${certId}`,
+                equipmentDetails: {},
+                isolationSteps: [],
+                deIsolationSteps: [],
+                verificationMethods: [],
+                emergencyProcedures: {},
+                requestorDetails: {},
+                approverDetails: {},
+                deIsolationConfirmation: {},
+                permitDetails: {
+                    plantName: "South Jeddah Noor 300 MWAC PV Solar Project",
+                    plantArea: [],
+                    department: [],
+                    contractorCompany: "",
+                    numEmployees: "",
+                    validFrom: "",
+                    validTo: "",
+                    locationOfWork: "",
+                    functionalName: "",
+                    equipmentNo: "",
+                    equipmentType: "",
+                    workDescription: ""
+                }
+            };
+            
+            currentMode = 'form';
+            isEditMode = true;
+            updateUI();
+            generateCertificateForm();
+        }
+        
+        function generateId() {
+            return 'cert-' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        }
+        
+        function updateUI() {
+            updateProgressSteps();
+            
+            document.getElementById('certificateList').classList.toggle('d-none', currentMode !== 'list');
+            document.getElementById('certificateFormContainer').classList.toggle('d-none', currentMode !== 'form');
+            document.getElementById('certificateViewContainer').classList.toggle('d-none', currentMode !== 'view');
+            
+            if (currentMode === 'form') {
+                document.getElementById('saveDraftBtn').classList.toggle('d-none', !isEditMode);
+                document.getElementById('submitCertificateBtn').classList.toggle('d-none', !isEditMode);
+            }
+        }
+        
+        function generateCertificateForm() {
+            const formContainer = document.getElementById('certificateForm');
+            formContainer.innerHTML = getCertificateFormHTML();
+            
+            // Initialize signature pads
+            initializeSignaturePads();
+            
+            // If editing, populate the form
+            if (currentCertificate && isEditMode) {
+                populateForm(currentCertificate);
+            }
+            
+            // Add event listeners for dynamic fields
+            document.getElementById('addIsolationStepBtn').addEventListener('click', addIsolationStep);
+            document.getElementById('addDeIsolationStepBtn').addEventListener('click', addDeIsolationStep);
+            document.getElementById('addVerificationMethodBtn').addEventListener('click', addVerificationMethod);
+            
+            // Add reset button listener
+            document.getElementById('resetFormBtn').addEventListener('click', confirmResetForm);
+            
+            // Add image upload listeners
+            document.getElementById('equipmentImageUpload').addEventListener('change', handleImageUpload);
+            document.getElementById('isolationSchemeImageUpload').addEventListener('change', handleImageUpload);
+            
+            // Add validation
+            setupFormValidation();
+            
+            // Set up plant area checkboxes
+            setupCheckboxListeners();
+        }
+        
+        function setupCheckboxListeners() {
+            // Plant area checkboxes
+            document.querySelectorAll('input[name="plantArea"]').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    if (this.id === 'areaOthers' && this.checked) {
+                        document.getElementById('areaOthersSpecify').style.display = 'block';
+                    } else if (this.id === 'areaOthers' && !this.checked) {
+                        document.getElementById('areaOthersSpecify').style.display = 'none';
+                        document.getElementById('areaOthersSpecify').value = '';
+                    }
+                });
+            });
+            
+            // Department checkboxes
+            document.querySelectorAll('input[name="department"]').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    if (this.id === 'deptOthers' && this.checked) {
+                        document.getElementById('deptOthersSpecify').style.display = 'block';
+                    } else if (this.id === 'deptOthers' && !this.checked) {
+                        document.getElementById('deptOthersSpecify').style.display = 'none';
+                        document.getElementById('deptOthersSpecify').value = '';
+                    }
+                });
+            });
+        }
+        
+        function getCertificateFormHTML() {
+            return `
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-info-circle section-icon"></i>Basic Information
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="certificateId" class="form-label required-field">Certificate ID</label>
+                                <input type="text" class="form-control" id="certificateId" value="${currentCertificate.certificateId}" readonly>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="certificateDate" class="form-label required-field">Date</label>
+                                <input type="datetime-local" class="form-control" id="certificateDate" required>
+                            </div>
+                        </div>
+                        
+                        <!-- Common Permit Sections -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="permitNumber">Permit Number</label>
+                                    <input type="text" class="form-control" id="permitNumber" placeholder="O&M-PTW-0000" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label>Date Issued</label>
+                                    <input type="date" class="form-control" id="dateIssued" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label>Plant Name</label>
+                            <input type="text" class="form-control" value="South Jeddah Noor 300 MWAC PV Solar Project" readonly>
+                        </div>
+                        <h5 class="section-title"><i class="fas fa-map-marker-alt section-icon"></i> Plant Area & Department</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>SJNPV Plant Area</label>
+                                    <div class="checkbox-grid">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="PV Field" id="areaPVField" name="plantArea">
+                                            <label class="form-check-label" for="areaPVField">PV Field</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="PVSS" id="areaPVSS" name="plantArea">
+                                            <label class="form-check-label" for="areaPVSS">PVSS</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="O&M Building" id="areaOMBuilding" name="plantArea">
+                                            <label class="form-check-label" for="areaOMBuilding">O&M Building</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="O&M Warehouse" id="areaOMWarehouse" name="plantArea">
+                                            <label class="form-check-label" for="areaOMWarehouse">O&M Warehouse</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="Security Center" id="areaSecurityCenter" name="plantArea">
+                                            <label class="form-check-label" for="areaSecurityCenter">Security Center</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="Visitor Center" id="areaVisitorCenter" name="plantArea">
+                                            <label class="form-check-label" for="areaVisitorCenter">Visitor Center</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="Guard House" id="areaGuardHouse" name="plantArea">
+                                            <label class="form-check-label" for="areaGuardHouse">Guard House</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="Others" id="areaOthers" name="plantArea">
+                                            <label class="form-check-label" for="areaOthers">Others</label>
+                                            <input type="text" class="form-control mt-1" id="areaOthersSpecify" placeholder="Please specify" style="display: none;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>O&M Department</label>
+                                    <div class="checkbox-grid">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="Electrical" id="deptElectrical" name="department">
+                                            <label class="form-check-label" for="deptElectrical">Electrical</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="Mechnical" id="deptMechnical" name="department">
+                                            <label class="form-check-label" for="deptMechnical">Mechnical</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="Civil" id="deptCivil" name="department">
+                                            <label class="form-check-label" for="deptCivil">Civil</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="IT" id="deptIT" name="department">
+                                            <label class="form-check-label" for="deptIT">IT</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="Security and Safety" id="deptSecurity" name="department">
+                                            <label class="form-check-label" for="deptSecurity">Security and Safety</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="Admin" id="deptAdmin" name="department">
+                                            <label class="form-check-label" for="deptAdmin">Admin</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="Others" id="deptOthers" name="department">
+                                            <label class="form-check-label" for="deptOthers">Others</label>
+                                            <input type="text" class="form-control mt-1" id="deptOthersSpecify" placeholder="Please specify" style="display: none;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Contractor/Company</label>
+                                    <input type="text" class="form-control" id="contractorCompany">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Number of Employees</label>
+                                    <input type="number" class="form-control" id="numEmployees" min="1">
+                                </div>
+                            </div>
+                        </div>
+                        <h5 class="section-title"><i class="fas fa-calendar-check section-icon"></i> Work Execution Plan</h5>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="validFrom">Valid From (Date/Time)</label>
+                                    <input type="datetime-local" class="form-control" id="validFrom">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="validTo">Valid To (Date/Time)</label>
+                                    <input type="datetime-local" class="form-control" id="validTo">
+                                    <small class="form-text text-muted">Maximum for one Shift (12 hrs)</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="plantUnit">Location of Work</label>
+                                    <input type="text" class="form-control" id="locationOfWork" placeholder="For Example: Column Number, LT Panel Number">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="functionalLocation">Equipment Functional Name</label>
+                                    <input type="text" class="form-control" id="functionalName" placeholder="For example: M-Box or Inverter Duty Transformer">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="equipmentNo">Equipment Identification Number</label>
+                                    <input type="text" class="form-control" id="equipmentNo" placeholder="For example: C-207 T-06 B-33 LT-02 INV-03">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Tools and Equipment</label>
+                                    <select class="form-control" id="equipmentType">
+                                        <option>Please Select Tools</option>
+                                        <option>Power Tools</option>
+                                        <option>Hand Tools</option>
+                                        <option>Both Power and Hand Tools</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="workDescription">Description of Work</label>
+                            <textarea class="form-control" id="workDescription" rows="3" placeholder="Write details of task perform"></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-cog section-icon"></i>Equipment Details
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="equipmentName" class="form-label required-field">Equipment Name</label>
+                                <input type="text" class="form-control" id="equipmentName" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="equipmentTag" class="form-label required-field">Equipment Tag/ID</label>
+                                <input type="text" class="form-control" id="equipmentTag" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="equipmentType" class="form-label">Equipment Type</label>
+                                <select class="form-select" id="equipmentType">
+                                    <option value="">Select type</option>
+                                    <option value="mechanical">Mechanical</option>
+                                    <option value="electrical">Electrical</option>
+                                    <option value="instrumentation">Instrumentation</option>
+                                    <option value="piping">Piping</option>
+                                    <option value="vessel">Vessel/Tank</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="equipmentSystem" class="form-label">System/Process</label>
+                                <input type="text" class="form-control" id="equipmentSystem">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="equipmentImage" class="form-label">Equipment Image</label>
+                            <input type="file" class="form-control" id="equipmentImageUpload" accept="image/*">
+                            <div id="equipmentImagePreview" class="mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-clipboard-check section-icon"></i>Isolation Work Checklist
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Checklist Item</th>
+                                    <th>Yes</th>
+                                    <th>No</th>
+                                    <th>N/A</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Lockout/Tagout Required</td>
+                                    <td><input type="radio" name="lockoutRequired" value="yes"></td>
+                                    <td><input type="radio" name="lockoutRequired" value="no"></td>
+                                    <td><input type="radio" name="lockoutRequired" value="na"></td>
+                                </tr>
+                                <tr>
+                                    <td>Energy Isolation Required</td>
+                                    <td><input type="radio" name="energyIsolationRequired" value="yes"></td>
+                                    <td><input type="radio" name="energyIsolationRequired" value="no"></td>
+                                    <td><input type="radio" name="energyIsolationRequired" value="na"></td>
+                                </tr>
+                                <tr>
+                                    <td>Mechanical Isolation Required</td>
+                                    <td><input type="radio" name="mechanicalIsolationRequired" value="yes"></td>
+                                    <td><input type="radio" name="mechanicalIsolationRequired" value="no"></td>
+                                    <td><input type="radio" name="mechanicalIsolationRequired" value="na"></td>
+                                </tr>
+                                <tr>
+                                    <td>Electrical Isolation Required</td>
+                                    <td><input type="radio" name="electricalIsolationRequired" value="yes"></td>
+                                    <td><input type="radio" name="electricalIsolationRequired" value="no"></td>
+                                    <td><input type="radio" name="electricalIsolationRequired" value="na"></td>
+                                </tr>
+                                <tr>
+                                    <td>Pneumatic Isolation Required</td>
+                                    <td><input type="radio" name="pneumaticIsolationRequired" value="yes"></td>
+                                    <td><input type="radio" name="pneumaticIsolationRequired" value="no"></td>
+                                    <td><input type="radio" name="pneumaticIsolationRequired" value="na"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="mb-3">
+                            <label for="otherIsolationRequirements" class="form-label">Other Isolation Requirements</label>
+                            <textarea class="form-control" id="otherIsolationRequirements" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-tools section-icon"></i>Equipment-Specific Isolation Procedures
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="resetFormBtn">
+                            <i class="fas fa-redo"></i> Reset Section
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <h5 class="section-title">Isolation Steps</h5>
+                            <div id="isolationStepsContainer">
+                                <!-- Isolation steps will be added here -->
+                            </div>
+                            <button type="button" class="btn btn-sm btn-primary mt-2" id="addIsolationStepBtn">
+                                <i class="fas fa-plus"></i> Add Isolation Step
+                            </button>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5 class="section-title">De-isolation Steps</h5>
+                            <div id="deIsolationStepsContainer">
+                                <!-- De-isolation steps will be added here -->
+                            </div>
+                            <button type="button" class="btn btn-sm btn-primary mt-2" id="addDeIsolationStepBtn">
+                                <i class="fas fa-plus"></i> Add De-isolation Step
+                            </button>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5 class="section-title">Verification Method</h5>
+                            <div id="verificationMethodsContainer">
+                                <!-- Verification methods will be added here -->
+                            </div>
+                            <button type="button" class="btn btn-sm btn-primary mt-2" id="addVerificationMethodBtn">
+                                <i class="fas fa-plus"></i> Add Verification Method
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-project-diagram section-icon"></i>Isolation Scheme Implementation
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="isolationSchemeDescription" class="form-label">Isolation Scheme Description</label>
+                            <textarea class="form-control" id="isolationSchemeDescription" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="isolationSchemeImage" class="form-label">Isolation Scheme Diagram/Image</label>
+                            <input type="file" class="form-control" id="isolationSchemeImageUpload" accept="image/*">
+                            <div id="isolationSchemeImagePreview" class="mt-2"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Visual Isolation Points</label>
+                            <div class="visual-isolation">
+                                <div class="visual-item">
+                                    <img src="https://via.placeholder.com/100?text=Valve" alt="Valve">
+                                    <div>Valve Closed</div>
+                                </div>
+                                <div class="visual-item">
+                                    <img src="https://via.placeholder.com/100?text=Breaker" alt="Breaker">
+                                    <div>Breaker Open</div>
+                                </div>
+                                <div class="visual-item">
+                                    <img src="https://via.placeholder.com/100?text=Blind" alt="Blind">
+                                    <div>Blind Installed</div>
+                                </div>
+                                <div class="visual-item">
+                                    <img src="https://via.placeholder.com/100?text=Lock" alt="Lock">
+                                    <div>Lock Applied</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-check-double section-icon"></i>Verification & Documentation
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Verification Item</th>
+                                    <th>Yes</th>
+                                    <th>No</th>
+                                    <th>N/A</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>All energy sources identified and verified</td>
+                                    <td><input type="radio" name="energySourceVerified" value="yes"></td>
+                                    <td><input type="radio" name="energySourceVerified" value="no"></td>
+                                    <td><input type="radio" name="energySourceVerified" value="na"></td>
+                                </tr>
+                                <tr>
+                                    <td>Isolation points verified</td>
+                                    <td><input type="radio" name="isolationPointsVerified" value="yes"></td>
+                                    <td><input type="radio" name="isolationPointsVerified" value="no"></td>
+                                    <td><input type="radio" name="isolationPointsVerified" value="na"></td>
+                                </tr>
+                                <tr>
+                                    <td>Zero energy state verified</td>
+                                    <td><input type="radio" name="zeroEnergyVerified" value="yes"></td>
+                                    <td><input type="radio" name="zeroEnergyVerified" value="no"></td>
+                                    <td><input type="radio" name="zeroEnergyVerified" value="na"></td>
+                                </tr>
+                                <tr>
+                                    <td>Test equipment used and verified</td>
+                                    <td><input type="radio" name="testEquipmentVerified" value="yes"></td>
+                                    <td><input type="radio" name="testEquipmentVerified" value="no"></td>
+                                    <td><input type="radio" name="testEquipmentVerified" value="na"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="mb-3">
+                            <label for="verificationNotes" class="form-label">Verification Notes</label>
+                            <textarea class="form-control" id="verificationNotes" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="verificationAttachments" class="form-label">Attachments (Photos, Test Results)</label>
+                            <input type="file" class="form-control" id="verificationAttachments" multiple accept="image/*, .pdf, .doc, .docx">
+                            <div id="verificationAttachmentsPreview" class="mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-exclamation-triangle section-icon"></i>Emergency Procedures
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Emergency Procedure</th>
+                                    <th>Yes</th>
+                                    <th>No</th>
+                                    <th>N/A</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Emergency Shutdown Procedure defined</td>
+                                    <td><input type="radio" name="emergencyShutdownProcedure" value="yes"></td>
+                                    <td><input type="radio" name="emergencyShutdownProcedure" value="no"></td>
+                                    <td><input type="radio" name="emergencyShutdownProcedure" value="na"></td>
+                                </tr>
+                                <tr>
+                                    <td>Rescue Plan defined (if confined space)</td>
+                                    <td><input type="radio" name="rescuePlan" value="yes"></td>
+                                    <td><input type="radio" name="rescuePlan" value="no"></td>
+                                    <td><input type="radio" name="rescuePlan" value="na"></td>
+                                </tr>
+                                <tr>
+                                    <td>Emergency Contacts available</td>
+                                    <td><input type="radio" name="emergencyContacts" value="yes"></td>
+                                    <td><input type="radio" name="emergencyContacts" value="no"></td>
+                                    <td><input type="radio" name="emergencyContacts" value="na"></td>
+                                </tr>
+                                <tr>
+                                    <td>Emergency equipment available at site</td>
+                                    <td><input type="radio" name="emergencyEquipmentAvailable" value="yes"></td>
+                                    <td><input type="radio" name="emergencyEquipmentAvailable" value="no"></td>
+                                    <td><input type="radio" name="emergencyEquipmentAvailable" value="na"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="mb-3">
+                            <label for="emergencyShutdownProcedure" class="form-label">Emergency Shutdown Procedure Details</label>
+                            <textarea class="form-control" id="emergencyShutdownProcedure" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="rescuePlan" class="form-label">Rescue Plan Details (if confined space)</label>
+                            <textarea class="form-control" id="rescuePlan" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="emergencyContacts" class="form-label">Emergency Contacts</label>
+                            <textarea class="form-control" id="emergencyContacts" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-user-tie section-icon"></i>REQUESTOR DETAILS
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="requestorName" class="form-label required-field">Name</label>
+                                <input type="text" class="form-control" id="requestorName" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="requestorId" class="form-label required-field">Plant ID Number</label>
+                                <input type="text" class="form-control" id="requestorId" placeholder="SJN-PE-001" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="requestorPosition" class="form-label required-field">Position</label>
+                                <input type="text" class="form-control" id="requestorPosition" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="requestorDepartment" class="form-label required-field">Department</label>
+                                <input type="text" class="form-control" id="requestorDepartment" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="requestorContact" class="form-label required-field">Contact Number</label>
+                                <input type="tel" class="form-control" id="requestorContact" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="requestorDate" class="form-label required-field">Date</label>
+                                <input type="datetime-local" class="form-control" id="requestorDate" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-user-check section-icon"></i>APPROVER DETAILS
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="approverName" class="form-label required-field">Name</label>
+                                <input type="text" class="form-control" id="approverName" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="approverId" class="form-label required-field">Plant ID Number</label>
+                                <input type="text" class="form-control" id="approverId" placeholder="SJN-CE-001" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="approverPosition" class="form-label required-field">Position</label>
+                                <input type="text" class="form-control" id="approverPosition" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="approverDepartment" class="form-label required-field">Department</label>
+                                <input type="text" class="form-control" id="approverDepartment" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="approverContact" class="form-label required-field">Contact Number</label>
+                                <input type="tel" class="form-control" id="approverContact" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="approverDate" class="form-label required-field">Date</label>
+                                <input type="datetime-local" class="form-control" id="approverDate" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="approvalComments" class="form-label">Approval Comments</label>
+                            <textarea class="form-control" id="approvalComments" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-check-circle section-icon"></i>DE-ISOLATION CONFIRMATION
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Confirmation Item</th>
+                                    <th>Yes</th>
+                                    <th>No</th>
+                                    <th>N/A</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Work completed as planned</td>
+                                    <td><input type="radio" name="workCompleted" value="yes"></td>
+                                    <td><input type="radio" name="workCompleted" value="no"></td>
+                                    <td><input type="radio" name="workCompleted" value="na"></td>
+                                </tr>
+                                <tr>
+                                    <td>All tools and materials removed</td>
+                                    <td><input type="radio" name="toolsRemoved" value="yes"></td>
+                                    <td><input type="radio" name="toolsRemoved" value="no"></td>
+                                    <td><input type="radio" name="toolsRemoved" value="na"></td>
+                                </tr>
+                                <tr>
+                                    <td>All personnel accounted for</td>
+                                    <td><input type="radio" name="personnelAccounted" value="yes"></td>
+                                    <td><input type="radio" name="personnelAccounted" value="no"></td>
+                                    <td><input type="radio" name="personnelAccounted" value="na"></td>
+                                </tr>
+                                <tr>
+                                    <td>Guards reinstalled</td>
+                                    <td><input type="radio" name="guardsReinstalled" value="yes"></td>
+                                    <td><input type="radio" name="guardsReinstalled" value="no"></td>
+                                    <td><input type="radio" name="guardsReinstalled" value="na"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="mb-3">
+                            <label for="deIsolationNotes" class="form-label">De-isolation Notes</label>
+                            <textarea class="form-control" id="deIsolationNotes" rows="3"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="deIsolationSupervisor" class="form-label">Supervisor Name</label>
+                                <input type="text" class="form-control" id="deIsolationSupervisor">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="deIsolationDate" class="form-label">Date</label>
+                                <input type="datetime-local" class="form-control" id="deIsolationDate">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function initializeSignaturePads() {
+            // Make signature pads responsive
+            window.addEventListener('resize', resizeSignaturePads);
+            resizeSignaturePads();
+        }
+        
+        function resizeSignaturePads() {
+            // Not needed anymore since we removed signature pads
+        }
+        
+        function populateForm(certificate) {
+            // Basic Information
+            document.getElementById('certificateDate').value = formatDateTimeForInput(certificate.createdAt);
+            
+            // Permit Details
+            if (certificate.permitDetails) {
+                document.getElementById('permitNumber').value = certificate.permitDetails.permitNumber || '';
+                document.getElementById('dateIssued').value = certificate.permitDetails.dateIssued || '';
+                
+                // Plant Area checkboxes
+                if (certificate.permitDetails.plantArea) {
+                    certificate.permitDetails.plantArea.forEach(area => {
+                        const checkbox = document.querySelector(`input[name="plantArea"][value="${area}"]`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                            if (area === 'Others') {
+                                document.getElementById('areaOthersSpecify').style.display = 'block';
+                                document.getElementById('areaOthersSpecify').value = certificate.permitDetails.areaOthersSpecify || '';
+                            }
+                        }
+                    });
+                }
+                
+                // Department checkboxes
+                if (certificate.permitDetails.department) {
+                    certificate.permitDetails.department.forEach(dept => {
+                        const checkbox = document.querySelector(`input[name="department"][value="${dept}"]`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                            if (dept === 'Others') {
+                                document.getElementById('deptOthersSpecify').style.display = 'block';
+                                document.getElementById('deptOthersSpecify').value = certificate.permitDetails.deptOthersSpecify || '';
+                            }
+                        }
+                    });
+                }
+                
+                document.getElementById('contractorCompany').value = certificate.permitDetails.contractorCompany || '';
+                document.getElementById('numEmployees').value = certificate.permitDetails.numEmployees || '';
+                document.getElementById('validFrom').value = certificate.permitDetails.validFrom || '';
+                document.getElementById('validTo').value = certificate.permitDetails.validTo || '';
+                document.getElementById('locationOfWork').value = certificate.permitDetails.locationOfWork || '';
+                document.getElementById('functionalName').value = certificate.permitDetails.functionalName || '';
+                document.getElementById('equipmentNo').value = certificate.permitDetails.equipmentNo || '';
+                document.getElementById('equipmentType').value = certificate.permitDetails.equipmentType || '';
+                document.getElementById('workDescription').value = certificate.permitDetails.workDescription || '';
+            }
+            
+            // Equipment Details
+            document.getElementById('equipmentName').value = certificate.equipmentDetails?.name || '';
+            document.getElementById('equipmentTag').value = certificate.equipmentDetails?.tag || '';
+            document.getElementById('equipmentType').value = certificate.equipmentDetails?.type || '';
+            document.getElementById('equipmentSystem').value = certificate.equipmentDetails?.system || '';
+            
+            if (certificate.equipmentDetails?.image) {
+                document.getElementById('equipmentImagePreview').innerHTML = `
+                    <img src="${certificate.equipmentDetails.image}" class="equipment-image" alt="Equipment Image" style="max-width: 300px;">
+                `;
+            }
+            
+            // Isolation Work Checklist
+            setRadioValue('lockoutRequired', certificate.isolationChecklist?.lockoutRequired);
+            setRadioValue('energyIsolationRequired', certificate.isolationChecklist?.energyIsolationRequired);
+            setRadioValue('mechanicalIsolationRequired', certificate.isolationChecklist?.mechanicalIsolationRequired);
+            setRadioValue('electricalIsolationRequired', certificate.isolationChecklist?.electricalIsolationRequired);
+            setRadioValue('pneumaticIsolationRequired', certificate.isolationChecklist?.pneumaticIsolationRequired);
+            document.getElementById('otherIsolationRequirements').value = certificate.isolationChecklist?.otherRequirements || '';
+            
+            // Equipment-Specific Isolation Procedures
+            populateSteps('isolationStepsContainer', certificate.isolationSteps || [], 'isolation');
+            populateSteps('deIsolationStepsContainer', certificate.deIsolationSteps || [], 'deIsolation');
+            populateSteps('verificationMethodsContainer', certificate.verificationMethods || [], 'verification');
+            
+            // Isolation Scheme Implementation
+            document.getElementById('isolationSchemeDescription').value = certificate.isolationScheme?.description || '';
+            if (certificate.isolationScheme?.image) {
+                document.getElementById('isolationSchemeImagePreview').innerHTML = `
+                    <img src="${certificate.isolationScheme.image}" class="equipment-image" alt="Isolation Scheme Image" style="max-width: 300px;">
+                `;
+            }
+            
+            // Verification & Documentation
+            setRadioValue('energySourceVerified', certificate.verification?.energySourceVerified);
+            setRadioValue('isolationPointsVerified', certificate.verification?.isolationPointsVerified);
+            setRadioValue('zeroEnergyVerified', certificate.verification?.zeroEnergyVerified);
+            setRadioValue('testEquipmentVerified', certificate.verification?.testEquipmentVerified);
+            document.getElementById('verificationNotes').value = certificate.verification?.notes || '';
+            
+            if (certificate.verification?.attachments) {
+                const previewContainer = document.getElementById('verificationAttachmentsPreview');
+                previewContainer.innerHTML = '';
+                certificate.verification.attachments.forEach(attachment => {
+                    if (attachment.type === 'image') {
+                        previewContainer.innerHTML += `
+                            <img src="${attachment.url}" class="attachment-thumbnail" alt="Attachment">
+                        `;
+                    }
+                });
+            }
+            
+            // Emergency Procedures
+            setRadioValue('emergencyShutdownProcedure', certificate.emergencyProcedures?.shutdownProcedure);
+            setRadioValue('rescuePlan', certificate.emergencyProcedures?.rescuePlan);
+            setRadioValue('emergencyContacts', certificate.emergencyProcedures?.contacts);
+            setRadioValue('emergencyEquipmentAvailable', certificate.emergencyProcedures?.equipmentAvailable);
+            document.getElementById('emergencyShutdownProcedure').value = certificate.emergencyProcedures?.shutdownProcedureDetails || '';
+            document.getElementById('rescuePlan').value = certificate.emergencyProcedures?.rescuePlanDetails || '';
+            document.getElementById('emergencyContacts').value = certificate.emergencyProcedures?.contactsDetails || '';
+            
+            // Requestor Details
+            document.getElementById('requestorName').value = certificate.requestorDetails?.name || '';
+            document.getElementById('requestorId').value = certificate.requestorDetails?.id || '';
+            document.getElementById('requestorPosition').value = certificate.requestorDetails?.position || '';
+            document.getElementById('requestorDepartment').value = certificate.requestorDetails?.department || '';
+            document.getElementById('requestorContact').value = certificate.requestorDetails?.contact || '';
+            document.getElementById('requestorDate').value = formatDateTimeForInput(certificate.requestorDetails?.date || new Date().toISOString());
+            
+            // Approver Details
+            document.getElementById('approverName').value = certificate.approverDetails?.name || '';
+            document.getElementById('approverId').value = certificate.approverDetails?.id || '';
+            document.getElementById('approverPosition').value = certificate.approverDetails?.position || '';
+            document.getElementById('approverDepartment').value = certificate.approverDetails?.department || '';
+            document.getElementById('approverContact').value = certificate.approverDetails?.contact || '';
+            document.getElementById('approverDate').value = formatDateTimeForInput(certificate.approverDetails?.date || new Date().toISOString());
+            document.getElementById('approvalComments').value = certificate.approverDetails?.comments || '';
+            
+            // De-isolation Confirmation
+            setRadioValue('workCompleted', certificate.deIsolationConfirmation?.workCompleted);
+            setRadioValue('toolsRemoved', certificate.deIsolationConfirmation?.toolsRemoved);
+            setRadioValue('personnelAccounted', certificate.deIsolationConfirmation?.personnelAccounted);
+            setRadioValue('guardsReinstalled', certificate.deIsolationConfirmation?.guardsReinstalled);
+            document.getElementById('deIsolationNotes').value = certificate.deIsolationConfirmation?.notes || '';
+            document.getElementById('deIsolationSupervisor').value = certificate.deIsolationConfirmation?.supervisor || '';
+            document.getElementById('deIsolationDate').value = formatDateTimeForInput(certificate.deIsolationConfirmation?.date || new Date().toISOString());
+        }
+        
+        function setRadioValue(name, value) {
+            if (!value) return;
+            
+            const radios = document.getElementsByName(name);
+            for (const radio of radios) {
+                if (radio.value === value) {
+                    radio.checked = true;
+                    break;
+                }
+            }
+        }
+        
+        function formatDateTimeForInput(isoString) {
+            const date = new Date(isoString);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+        
+        function populateSteps(containerId, steps, type) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            steps.forEach((step, index) => {
+                const stepId = `${type}-step-${index}`;
+                const stepHtml = getStepHtml(stepId, step, type);
+                container.innerHTML += stepHtml;
+                
+                // Add event listener for delete button
+                document.getElementById(`delete-${stepId}`)?.addEventListener('click', function() {
+                    deleteStep(stepId, type);
+                });
+            });
+        }
+        
+        function getStepHtml(stepId, step, type) {
+            const stepTitle = type === 'isolation' ? 'Isolation Step' : 
+                            type === 'deIsolation' ? 'De-isolation Step' : 'Verification Method';
+            
+            return `
+                <div class="card mb-2" id="${stepId}-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">${stepTitle} #${stepId.split('-').pop()}</h6>
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="delete-${stepId}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        <div class="mb-2">
+                            <label for="${stepId}-description" class="form-label">Description</label>
+                            <textarea class="form-control" id="${stepId}-description" rows="2">${step.description || ''}</textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <label for="${stepId}-responsible" class="form-label">Responsible Person</label>
+                                <input type="text" class="form-control" id="${stepId}-responsible" value="${step.responsible || ''}">
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label for="${stepId}-completed" class="form-label">Completed</label>
+                                <select class="form-select" id="${stepId}-completed">
+                                    <option value="pending" ${step.completed === 'pending' ? 'selected' : ''}>Pending</option>
+                                    <option value="completed" ${step.completed === 'completed' ? 'selected' : ''}>Completed</option>
+                                    <option value="not-applicable" ${step.completed === 'not-applicable' ? 'selected' : ''}>Not Applicable</option>
+                                </select>
+                            </div>
+                        </div>
+                        ${type !== 'verification' ? `
+                        <div class="mb-2">
+                            <label for="${stepId}-comments" class="form-label">Comments</label>
+                            <textarea class="form-control" id="${stepId}-comments" rows="2">${step.comments || ''}</textarea>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        function addIsolationStep() {
+            const container = document.getElementById('isolationStepsContainer');
+            const stepId = `isolation-step-${container.children.length}`;
+            const stepHtml = getStepHtml(stepId, {}, 'isolation');
+            container.innerHTML += stepHtml;
+            
+            // Add event listener for delete button
+            document.getElementById(`delete-${stepId}`).addEventListener('click', function() {
+                deleteStep(stepId, 'isolation');
+            });
+        }
+        
+        function addDeIsolationStep() {
+            const container = document.getElementById('deIsolationStepsContainer');
+            const stepId = `deIsolation-step-${container.children.length}`;
+            const stepHtml = getStepHtml(stepId, {}, 'deIsolation');
+            container.innerHTML += stepHtml;
+            
+            // Add event listener for delete button
+            document.getElementById(`delete-${stepId}`).addEventListener('click', function() {
+                deleteStep(stepId, 'deIsolation');
+            });
+        }
+        
+        function addVerificationMethod() {
+            const container = document.getElementById('verificationMethodsContainer');
+            const stepId = `verification-step-${container.children.length}`;
+            const stepHtml = getStepHtml(stepId, {}, 'verification');
+            container.innerHTML += stepHtml;
+            
+            // Add event listener for delete button
+            document.getElementById(`delete-${stepId}`).addEventListener('click', function() {
+                deleteStep(stepId, 'verification');
+            });
+        }
+        
+        function deleteStep(stepId, type) {
+            const card = document.getElementById(`${stepId}-card`);
+            if (card) {
+                card.remove();
+            }
+        }
+        
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const previewId = e.target.id.replace('Upload', 'Preview');
+                document.getElementById(previewId).innerHTML = `
+                    <img src="${event.target.result}" class="equipment-image" alt="Uploaded Image" style="max-width: 300px;">
+                `;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function setupFormValidation() {
+            const form = document.getElementById('certificateForm');
+            const requiredFields = form.querySelectorAll('[required]');
+            
+            requiredFields.forEach(field => {
+                field.addEventListener('input', function() {
+                    this.classList.toggle('is-invalid', !this.value);
+                });
+            });
+        }
+        
+        function validateForm() {
+            let isValid = true;
+            const form = document.getElementById('certificateForm');
+            const requiredFields = form.querySelectorAll('[required]');
+            
+            requiredFields.forEach(field => {
+                if (!field.value) {
+                    field.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+            
+            // Check if at least one isolation step exists
+            const isolationSteps = document.getElementById('isolationStepsContainer').children;
+            if (isolationSteps.length === 0) {
+                alert('Please add at least one isolation step');
+                isValid = false;
+            }
+            
+            return isValid;
+        }
+        
+        function saveAsDraft() {
+            if (!validateForm()) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            collectFormData();
+            currentCertificate.status = 'draft';
+            saveCertificate();
+            
+            alert('Draft saved successfully');
+            showCertificateList();
+        }
+        
+        function submitCertificate() {
+            if (!validateForm()) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            // Show confirmation dialog
+            const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+            document.getElementById('confirmationModalTitle').textContent = 'Submit Certificate';
+            document.getElementById('confirmationModalBody').textContent = 'Are you sure you want to submit this isolation certificate? This action cannot be undone.';
+            document.getElementById('confirmActionBtn').dataset.action = 'submit';
+            modal.show();
+        }
+        
+        function actuallySubmitCertificate() {
+            collectFormData();
+            currentCertificate.status = 'submitted';
+            currentCertificate.submittedAt = new Date().toISOString();
+            saveCertificate();
+            
+            alert('Certificate submitted successfully');
+            showCertificateList();
+        }
+        
+        function confirmResetForm() {
+            const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+            document.getElementById('confirmationModalTitle').textContent = 'Reset Section';
+            document.getElementById('confirmationModalBody').textContent = 'Are you sure you want to reset the Equipment-Specific Isolation Procedures section? All data in this section will be lost.';
+            document.getElementById('confirmActionBtn').dataset.action = 'reset';
+            modal.show();
+        }
+        
+        function actuallyResetForm() {
+            // Clear isolation steps
+            document.getElementById('isolationStepsContainer').innerHTML = '';
+            
+            // Clear de-isolation steps
+            document.getElementById('deIsolationStepsContainer').innerHTML = '';
+            
+            // Clear verification methods
+            document.getElementById('verificationMethodsContainer').innerHTML = '';
+            
+            // Update the certificate object
+            if (currentCertificate) {
+                currentCertificate.isolationSteps = [];
+                currentCertificate.deIsolationSteps = [];
+                currentCertificate.verificationMethods = [];
+            }
+        }
+        
+        function collectFormData() {
+            if (!currentCertificate) return;
+            
+            // Basic Information
+            currentCertificate.workDescription = document.getElementById('workDescription').value;
+            currentCertificate.workLocation = document.getElementById('locationOfWork').value;
+            
+            // Permit Details
+            currentCertificate.permitDetails = {
+                permitNumber: document.getElementById('permitNumber').value,
+                dateIssued: document.getElementById('dateIssued').value,
+                plantName: "South Jeddah Noor 300 MWAC PV Solar Project",
+                                plantArea: Array.from(document.querySelectorAll('input[name="plantArea"]:checked')).map(el => el.value),
+                areaOthersSpecify: document.getElementById('areaOthersSpecify').value,
+                department: Array.from(document.querySelectorAll('input[name="department"]:checked')).map(el => el.value),
+                deptOthersSpecify: document.getElementById('deptOthersSpecify').value,
+                contractorCompany: document.getElementById('contractorCompany').value,
+                numEmployees: document.getElementById('numEmployees').value,
+                validFrom: document.getElementById('validFrom').value,
+                validTo: document.getElementById('validTo').value,
+                locationOfWork: document.getElementById('locationOfWork').value,
+                functionalName: document.getElementById('functionalName').value,
+                equipmentNo: document.getElementById('equipmentNo').value,
+                equipmentType: document.getElementById('equipmentType').value,
+                workDescription: document.getElementById('workDescription').value
+            };
+
+            // Equipment Details
+            currentCertificate.equipmentDetails = {
+                name: document.getElementById('equipmentName').value,
+                tag: document.getElementById('equipmentTag').value,
+                type: document.getElementById('equipmentType').value,
+                system: document.getElementById('equipmentSystem').value,
+                image: document.querySelector('#equipmentImagePreview img')?.src || ''
+            };
+
+            // Isolation Work Checklist
+            currentCertificate.isolationChecklist = {
+                lockoutRequired: getRadioValue('lockoutRequired'),
+                energyIsolationRequired: getRadioValue('energyIsolationRequired'),
+                mechanicalIsolationRequired: getRadioValue('mechanicalIsolationRequired'),
+                electricalIsolationRequired: getRadioValue('electricalIsolationRequired'),
+                pneumaticIsolationRequired: getRadioValue('pneumaticIsolationRequired'),
+                otherRequirements: document.getElementById('otherIsolationRequirements').value
+            };
+
+            // Equipment-Specific Isolation Procedures
+            currentCertificate.isolationSteps = collectSteps('isolationStepsContainer', 'isolation');
+            currentCertificate.deIsolationSteps = collectSteps('deIsolationStepsContainer', 'deIsolation');
+            currentCertificate.verificationMethods = collectSteps('verificationMethodsContainer', 'verification');
+
+            // Isolation Scheme Implementation
+            currentCertificate.isolationScheme = {
+                description: document.getElementById('isolationSchemeDescription').value,
+                image: document.querySelector('#isolationSchemeImagePreview img')?.src || ''
+            };
+
+            // Verification & Documentation
+            currentCertificate.verification = {
+                energySourceVerified: getRadioValue('energySourceVerified'),
+                isolationPointsVerified: getRadioValue('isolationPointsVerified'),
+                zeroEnergyVerified: getRadioValue('zeroEnergyVerified'),
+                testEquipmentVerified: getRadioValue('testEquipmentVerified'),
+                notes: document.getElementById('verificationNotes').value,
+                attachments: collectAttachments()
+            };
+
+            // Emergency Procedures
+            currentCertificate.emergencyProcedures = {
+                shutdownProcedure: getRadioValue('emergencyShutdownProcedure'),
+                rescuePlan: getRadioValue('rescuePlan'),
+                contacts: getRadioValue('emergencyContacts'),
+                equipmentAvailable: getRadioValue('emergencyEquipmentAvailable'),
+                shutdownProcedureDetails: document.getElementById('emergencyShutdownProcedure').value,
+                rescuePlanDetails: document.getElementById('rescuePlan').value,
+                contactsDetails: document.getElementById('emergencyContacts').value
+            };
+
+            // Requestor Details
+            currentCertificate.requestorDetails = {
+                name: document.getElementById('requestorName').value,
+                id: document.getElementById('requestorId').value,
+                position: document.getElementById('requestorPosition').value,
+                department: document.getElementById('requestorDepartment').value,
+                contact: document.getElementById('requestorContact').value,
+                date: document.getElementById('requestorDate').value
+            };
+
+            // Approver Details
+            currentCertificate.approverDetails = {
+                name: document.getElementById('approverName').value,
+                id: document.getElementById('approverId').value,
+                position: document.getElementById('approverPosition').value,
+                department: document.getElementById('approverDepartment').value,
+                contact: document.getElementById('approverContact').value,
+                date: document.getElementById('approverDate').value,
+                comments: document.getElementById('approvalComments').value
+            };
+
+            // De-isolation Confirmation
+            currentCertificate.deIsolationConfirmation = {
+                workCompleted: getRadioValue('workCompleted'),
+                toolsRemoved: getRadioValue('toolsRemoved'),
+                personnelAccounted: getRadioValue('personnelAccounted'),
+                guardsReinstalled: getRadioValue('guardsReinstalled'),
+                notes: document.getElementById('deIsolationNotes').value,
+                supervisor: document.getElementById('deIsolationSupervisor').value,
+                date: document.getElementById('deIsolationDate').value
+            };
+        }
+
+        function getRadioValue(name) {
+            const selected = document.querySelector(`input[name="${name}"]:checked`);
+            return selected ? selected.value : null;
+        }
+
+        function collectSteps(containerId, type) {
+            const container = document.getElementById(containerId);
+            const steps = [];
+            
+            for (let i = 0; i < container.children.length; i++) {
+                const stepId = `${type}-step-${i}`;
+                const step = {
+                    description: document.getElementById(`${stepId}-description`).value,
+                    responsible: document.getElementById(`${stepId}-responsible`).value,
+                    completed: document.getElementById(`${stepId}-completed`).value
+                };
+                
+                if (type !== 'verification') {
+                    step.comments = document.getElementById(`${stepId}-comments`).value;
+                }
+                
+                steps.push(step);
+            }
+            
+            return steps;
+        }
+
+        function collectAttachments() {
+            const attachments = [];
+            const previewContainer = document.getElementById('verificationAttachmentsPreview');
+            const images = previewContainer.querySelectorAll('img');
+            
+            images.forEach(img => {
+                attachments.push({
+                    type: 'image',
+                    url: img.src
+                });
+            });
+            
+            return attachments;
+        }
+
+        function saveCertificate() {
+            if (!currentCertificate) return;
+            
+            // Update or add the certificate
+            const index = certificates.findIndex(c => c.id === currentCertificate.id);
+            if (index >= 0) {
+                certificates[index] = currentCertificate;
+            } else {
+                certificates.push(currentCertificate);
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('isolationCertificates', JSON.stringify(certificates));
+        }
+
+        function viewCertificate(id) {
+            currentCertificate = certificates.find(c => c.id === id);
+            if (!currentCertificate) return;
+            
+            currentMode = 'view';
+            isEditMode = false;
+            updateUI();
+            generateCertificateView();
+        }
+
+        function generateCertificateView() {
+            const viewContainer = document.getElementById('certificateView');
+            viewContainer.innerHTML = getCertificateViewHTML();
+        }
+
+        function getCertificateViewHTML() {
+            if (!currentCertificate) return '';
+            
+            const statusBadge = currentCertificate.status === 'draft' ? 
+                '<span class="badge bg-warning">Draft</span>' :
+                currentCertificate.status === 'submitted' ?
+                '<span class="badge bg-primary">Submitted</span>' :
+                currentCertificate.status === 'approved' ?
+                '<span class="badge bg-success">Approved</span>' :
+                '<span class="badge bg-secondary">Unknown</span>';
+            
+            return `
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-0">Isolation Certificate: ${currentCertificate.certificateId}</h4>
+                        </div>
+                        <div>
+                            ${statusBadge}
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h5><i class="fas fa-info-circle"></i> Basic Information</h5>
+                                <p><strong>Created:</strong> ${formatDate(currentCertificate.createdAt)}</p>
+                                ${currentCertificate.submittedAt ? `<p><strong>Submitted:</strong> ${formatDate(currentCertificate.submittedAt)}</p>` : ''}
+                            </div>
+                            <div class="col-md-6">
+                                <h5><i class="fas fa-cog"></i> Equipment Details</h5>
+                                <p><strong>Name:</strong> ${currentCertificate.equipmentDetails?.name || 'N/A'}</p>
+                                <p><strong>Tag/ID:</strong> ${currentCertificate.equipmentDetails?.tag || 'N/A'}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card mb-3">
+                                    <div class="card-header">
+                                        <i class="fas fa-user-tie"></i> Requestor Details
+                                    </div>
+                                    <div class="card-body">
+                                        <p><strong>Name:</strong> ${currentCertificate.requestorDetails?.name || 'N/A'}</p>
+                                        <p><strong>ID:</strong> ${currentCertificate.requestorDetails?.id || 'N/A'}</p>
+                                        <p><strong>Position:</strong> ${currentCertificate.requestorDetails?.position || 'N/A'}</p>
+                                        <p><strong>Department:</strong> ${currentCertificate.requestorDetails?.department || 'N/A'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card mb-3">
+                                    <div class="card-header">
+                                        <i class="fas fa-user-check"></i> Approver Details
+                                    </div>
+                                    <div class="card-body">
+                                        <p><strong>Name:</strong> ${currentCertificate.approverDetails?.name || 'N/A'}</p>
+                                        <p><strong>ID:</strong> ${currentCertificate.approverDetails?.id || 'N/A'}</p>
+                                        <p><strong>Position:</strong> ${currentCertificate.approverDetails?.position || 'N/A'}</p>
+                                        <p><strong>Department:</strong> ${currentCertificate.approverDetails?.department || 'N/A'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <i class="fas fa-tools"></i> Isolation Steps
+                            </div>
+                            <div class="card-body">
+                                ${currentCertificate.isolationSteps?.length ? 
+                                    currentCertificate.isolationSteps.map((step, i) => `
+                                        <div class="mb-3 p-2 border-bottom">
+                                            <h6>Step ${i+1}: ${step.description}</h6>
+                                            <p><strong>Responsible:</strong> ${step.responsible || 'N/A'}</p>
+                                            <p><strong>Status:</strong> ${step.completed || 'Pending'}</p>
+                                            ${step.comments ? `<p><strong>Comments:</strong> ${step.comments}</p>` : ''}
+                                        </div>
+                                    `).join('') : 
+                                    '<p>No isolation steps defined</p>'}
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <i class="fas fa-check-circle"></i> Verification Methods
+                            </div>
+                            <div class="card-body">
+                                ${currentCertificate.verificationMethods?.length ? 
+                                    currentCertificate.verificationMethods.map((method, i) => `
+                                        <div class="mb-3 p-2 border-bottom">
+                                            <h6>Method ${i+1}: ${method.description}</h6>
+                                            <p><strong>Responsible:</strong> ${method.responsible || 'N/A'}</p>
+                                            <p><strong>Status:</strong> ${method.completed || 'Pending'}</p>
+                                        </div>
+                                    `).join('') : 
+                                    '<p>No verification methods defined</p>'}
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <i class="fas fa-project-diagram"></i> Isolation Scheme
+                            </div>
+                            <div class="card-body">
+                                ${currentCertificate.isolationScheme?.description ? 
+                                    `<p>${currentCertificate.isolationScheme.description}</p>` : 
+                                    '<p>No description provided</p>'}
+                                
+                                ${currentCertificate.isolationScheme?.image ? 
+                                    `<img src="${currentCertificate.isolationScheme.image}" class="img-fluid" alt="Isolation Scheme">` : 
+                                    '<p>No image provided</p>'}
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-exclamation-triangle"></i> Emergency Procedures
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Emergency Shutdown:</strong> ${currentCertificate.emergencyProcedures?.shutdownProcedureDetails || 'N/A'}</p>
+                                <p><strong>Rescue Plan:</strong> ${currentCertificate.emergencyProcedures?.rescuePlanDetails || 'N/A'}</p>
+                                <p><strong>Emergency Contacts:</strong> ${currentCertificate.emergencyProcedures?.contactsDetails || 'N/A'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function formatDate(isoString) {
+            if (!isoString) return 'N/A';
+            const date = new Date(isoString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+
+        function editCertificate(id) {
+            if (id) {
+                currentCertificate = certificates.find(c => c.id === id);
+                if (!currentCertificate) return;
+            }
+            
+            currentMode = 'form';
+            isEditMode = true;
+            updateUI();
+            generateCertificateForm();
+        }
+
+        function deleteCertificate(id) {
+            const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+            document.getElementById('confirmationModalTitle').textContent = 'Delete Certificate';
+            document.getElementById('confirmationModalBody').textContent = 'Are you sure you want to delete this certificate? This action cannot be undone.';
+            document.getElementById('confirmActionBtn').dataset.action = 'delete';
+            document.getElementById('confirmActionBtn').dataset.id = id;
+            modal.show();
+            
+            // Update the confirm button to handle deletion
+            document.getElementById('confirmActionBtn').addEventListener('click', function() {
+                const idToDelete = this.dataset.id;
+                certificates = certificates.filter(c => c.id !== idToDelete);
+                localStorage.setItem('isolationCertificates', JSON.stringify(certificates));
+                loadCertificateList();
+                modal.hide();
+            }, { once: true });
+        }
+
+        function showCertificateList() {
+            currentMode = 'list';
+            currentCertificate = null;
+            isEditMode = false;
+            updateUI();
+            loadCertificateList();
+        }
+
+        function generatePDF() {
+            if (!currentCertificate) return;
+            
+            const loadingOverlay = document.querySelector('.loading-overlay');
+            loadingOverlay.style.display = 'flex';
+            
+            // Use html2canvas to capture the certificate view
+            const element = document.getElementById('certificateView');
+            
+            html2canvas(element, {
+                scale: 2,
+                logging: false,
+                useCORS: true,
+                allowTaint: true
+            }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const imgWidth = 210; // A4 width in mm
+                const imgHeight = canvas.height * imgWidth / canvas.width;
+                
+                pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                pdf.save(`Isolation_Certificate_${currentCertificate.certificateId}.pdf`);
+                
+                loadingOverlay.style.display = 'none';
+            }).catch(error => {
+                console.error('Error generating PDF:', error);
+                loadingOverlay.style.display = 'none';
+                alert('Error generating PDF. Please try again.');
+            });
+        }
+    </script>
+</body>
+</html>
